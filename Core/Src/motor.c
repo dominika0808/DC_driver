@@ -8,7 +8,7 @@
 #define ENCODER_REVOLUTION				48
 #define MOTOR_GEAR						75
 #define SECEND_IN_MINUTE				60
-#define CALCULATIONS_PER_SECEND 		8
+#define CALCULATIONS_PER_SECEND 		10
 
 void motor_str_init(serwo_str *m, TIM_HandleTypeDef *tim1, TIM_HandleTypeDef *tim2, int32_t dir)
 {
@@ -19,7 +19,7 @@ void motor_str_init(serwo_str *m, TIM_HandleTypeDef *tim1, TIM_HandleTypeDef *ti
 	m->pulse_count = 0;
 	m->current = 0;
 	m->speed = 0;
-	m->set_speed = 100;
+	m->set_speed = 0;
 	m->direction = dir;
 	m->actual_PWM = 0;
 }
@@ -39,16 +39,15 @@ void motor_calculate_current(serwo_str *m)
 
 void motor_set_speed(serwo_str *m, int16_t speed)
 {
-	if(speed <= 120 && speed >= -120) m->set_speed = speed;
+	if(speed < 10 && speed > -10) m->set_speed = 0;
+	else if(speed <= 120 && speed >= -120) m->set_speed = speed;
 }
 
 void motor_run_pid(serwo_str *m)
 {
-	motor_calculate_speed(m);
-
 	int32_t output = pid_calculate(&(m->pid_controller), m->set_speed, m->speed);
 
-	if((m->set_speed * m->direction) >= 0)
+	if((m->actual_PWM * m->direction) >= 0)
 	{
 		m->actual_PWM += output;
 		motor_right(m->motor_timer, abs(m->actual_PWM));
@@ -62,7 +61,7 @@ void motor_run_pid(serwo_str *m)
 
 void motor_right(TIM_HandleTypeDef *tim, uint8_t duty)
 {
-	if(duty >= 98) duty = 98;
+	if(duty >= 98) duty = 90;
 	__HAL_TIM_SET_COMPARE(tim, HIGH_SIDE_RIGHT_TRANSSISTOR, 0);
 	__HAL_TIM_SET_COMPARE(tim, LOW_SIDE_LEFT_TRANSSISTOR, 98);
 	__HAL_TIM_SET_COMPARE(tim, LOW_SIDE_RIGHT_TRANSSISTOR, (0));
@@ -72,7 +71,7 @@ void motor_right(TIM_HandleTypeDef *tim, uint8_t duty)
 
 void motor_left(TIM_HandleTypeDef *tim, uint8_t duty)
 {
-	if(duty >= 98) duty = 98;
+	if(duty >= 98) duty = 90;
 	__HAL_TIM_SET_COMPARE(tim, LOW_SIDE_RIGHT_TRANSSISTOR, 98);
 	__HAL_TIM_SET_COMPARE(tim, HIGH_SIDE_LEFT_TRANSSISTOR, 0);
 	__HAL_TIM_SET_COMPARE(tim, LOW_SIDE_LEFT_TRANSSISTOR, (0));

@@ -35,9 +35,9 @@
 /* USER CODE BEGIN PTD */
 
 typedef enum{
-	SPEED,
-	DISTANCE,
-}msg_e;
+	SPEED = 0xA1,
+	DISTANCE =0xA2,
+}msg_t;
 
 /* USER CODE END PTD */
 
@@ -51,11 +51,11 @@ typedef enum{
 
 #define RIGHT_MOTOR_KP					0.3
 #define RIGHT_MOTOR_KI					0.05
-#define RIGHT_MOTOR_KD					0.05
+#define RIGHT_MOTOR_KD					0.01
 #define LEFT_MOTOR_KP					0.3
 #define LEFT_MOTOR_KI					0.05
-#define LEFT_MOTOR_KD					0.05
-#define ANTI_WINDUP			        	1000
+#define LEFT_MOTOR_KD					0.01
+#define ANTI_WINDUP			        	100
 
 /* USER CODE END PD */
 
@@ -131,6 +131,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM6_Init();
   MX_TIM15_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_Base_Start(RIGHT_MOTOR_TIMER);
@@ -159,13 +160,14 @@ int main(void)
   //HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
   //HAL_ADCEx_Calibration_Start(&hadc3, ADC_SINGLE_ENDED);
 
+  HAL_TIM_Base_Start_IT(&htim7);
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start(&htim15);
 
   HAL_ADC_Start_DMA(&hadc2, ADC2_measurement, 3);
   HAL_ADC_Start_DMA(&hadc3, ADC3_measurement, 2);
 
-  HAL_UART_Receive_DMA(&huart3, UART_buffer, 5);
+  HAL_UART_Receive_IT(&huart3, UART_buffer, 5);
 
   //left_motor_forward(98);
   //right_motor_forward(98);
@@ -200,8 +202,11 @@ void SystemClock_Config(void)
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -211,12 +216,12 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -235,13 +240,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim -> Instance == TIM6)
 	{
-		motor_run_pid(&left_motor);
-		motor_run_pid(&right_motor);
-		motor_calculate_current(&right_motor);
-		motor_calculate_current(&left_motor);
 		v_cell_1 = 3.3f * ADC2_measurement[2] / 4096.0f;
 		v_cell_2 = 3.3f * ADC3_measurement[0] / 4096.0f;
 		v_cell_3 = 3.3f * ADC3_measurement[1] / 4096.0f;
+	}
+
+	if(htim -> Instance == TIM7)
+	{
+		motor_calculate_speed(&right_motor);
+		motor_calculate_speed(&left_motor);
+		motor_run_pid(&left_motor);
+		motor_run_pid(&right_motor);
 	}
 
 }
@@ -257,8 +266,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	HAL_UART_Receive_DMA(&huart3, UART_buffer, 5);
 	parse();
+	HAL_UART_Receive_IT(&huart3, UART_buffer, 5);
 }
 
 void parse(void)
@@ -266,8 +275,8 @@ void parse(void)
 	switch(UART_buffer[0])
 	{
 		case SPEED:
-			speed_right = (UART_buffer[1]>>8|UART_buffer[2]);
-			speed_left = (UART_buffer[3]>>8|UART_buffer[4]);
+			speed_right = (int16_t)(UART_buffer[1]<<8 | UART_buffer[2]);
+			speed_left = (int16_t)(UART_buffer[3]<<8 | UART_buffer[4]);
 			motor_set_speed(&right_motor, speed_right);
 			motor_set_speed(&left_motor, speed_left);
 			break;
