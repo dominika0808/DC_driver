@@ -1,7 +1,0 @@
-../Core/Src/main.c:70:6:left_motor_forward	1
-../Core/Src/main.c:85:6:left_motor_back	1
-../Core/Src/main.c:98:6:right_motor_forward	1
-../Core/Src/main.c:111:6:right_motor_back	1
-../Core/Src/main.c:205:6:SystemClock_Config	4
-../Core/Src/main.c:131:5:main	1
-../Core/Src/main.c:259:6:Error_Handler	1
