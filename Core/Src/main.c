@@ -20,7 +20,6 @@
 #include "main.h"
 #include "adc.h"
 #include "dma.h"
-#include "tim.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -127,7 +126,6 @@ int main(void)
   MX_DMA_Init();
   MX_ADC2_Init();
   MX_ADC3_Init();
-  MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
 
   GpioInit();
@@ -136,8 +134,8 @@ int main(void)
   Tim2InitPWM();
   Tim3InitEncoderMode();
   Tim4InitEncoderMode();
-  Tim6Init();
   Tim7Init();
+  Tim15Init();
 
   motor_str_init(&right_motor, 'R');
   motor_str_init(&left_motor, 'L');
@@ -146,8 +144,6 @@ int main(void)
   filter_init(&(right_motor.filter));
   filter_init(&(left_motor.filter));
 
-  HAL_TIM_Base_Start(&htim15);
-
   HAL_ADC_Start_DMA(&hadc2, ADC2_measurement, 3);
   HAL_ADC_Start_DMA(&hadc3, ADC3_measurement, 2);
 
@@ -155,8 +151,8 @@ int main(void)
   Tim2Start();
   Tim3Start();
   Tim4Start();
-  Tim6Start();
   Tim7Start();
+  Tim15Start();
 
   /* USER CODE END 2 */
 

@@ -26,10 +26,10 @@ Status_t Tim4InitEncoderMode(void);
 Status_t Tim4Start(void);
 int16_t Tim4GetValue(void);
 
-Status_t Tim6Init(void);
-Status_t Tim6Start(void);
-
 Status_t Tim7Init(void);
 Status_t Tim7Start(void);
+
+Status_t Tim15Init(void);
+Status_t Tim15Start(void);
 
 #endif

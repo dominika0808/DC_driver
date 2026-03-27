@@ -183,26 +183,6 @@ int16_t Tim4GetValue(void)
 	return cnt;
 }
 
-Status_t Tim6Init(void)
-{
-	RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
-
-	TIM6->PSC = 99;
-	TIM6->ARR = 49151;
-	TIM6->SR = 0;
-
-	//TIM6->EGR |=TIM_EGR_UG;event dla adc do poprawy
-
-	return STATUS_OK;
-}
-
-Status_t Tim6Start(void)
-{
-	TIM6->CR1 |= TIM_CR1_CEN;
-
-	return STATUS_OK;
-}
-
 Status_t Tim7Init(void)
 {
 	RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
@@ -225,3 +205,24 @@ Status_t Tim7Start(void)
 
 	return STATUS_OK;
 }
+
+Status_t Tim15Init(void)
+{
+	RCC->APB2ENR |= RCC_APB2ENR_TIM15EN;
+
+	TIM15->PSC = 99;
+	TIM15->ARR = 49151;
+	TIM15->SR = 0;
+
+	TIM15->CR2 |= TIM_CR2_MMS_1;
+
+	return STATUS_OK;
+}
+
+Status_t Tim15Start(void)
+{
+	TIM15->CR1 |= TIM_CR1_CEN;
+
+	return STATUS_OK;
+}
+
