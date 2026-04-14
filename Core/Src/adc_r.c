@@ -1,0 +1,84 @@
+#include "adc_r.h"
+#include "stm32f3xx.h"
+
+#define ADC_CFGR_EXTSEL_EXT14 	(0xEUL << (6U)) //tim15
+#define ADC_CFGR_EXTSEL_EXT9 	(0x9UL << (6U)) //tim1
+
+#define ADC_SQR1_SQ1_1CH		(0x1UL << (6U))
+#define ADC_SQR1_SQ1_2CH		(0x2UL << (6U))
+#define ADC_SQR1_SQ2_3CH		(0x3UL << (12U))
+#define ADC_SQR1_SQ2_12CH		(0xCUL << (12U))
+#define ADC_SQR1_SQ3_12CH		(0xCUL << (18U))
+
+
+Status_t ADC2Init(uint32_t buffer)
+{
+	RCC->AHBENR |= RCC_AHBENR_ADC12EN | RCC_AHBENR_DMA2EN;
+
+	DMA2_Channel1->CCR = 0;
+	DMA2_Channel1->CPAR = (uint32_t)&ADC2->DR;
+	DMA2_Channel1->CMAR = buffer;
+	DMA2_Channel1->CNDTR = 3;
+
+	DMA2_Channel1->CCR |= DMA_CCR_MINC | DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 |  DMA_CCR_CIRC;
+
+	ADC12_COMMON->CCR |= ADC12_CCR_CKMODE_0;
+
+	ADC2->CR = 0;
+	ADC2->CR |= ADC_CR_ADVREGEN_0;
+
+	for(volatile int i=0; i<1000; i++);
+
+	ADC2->CR |= ADC_CR_ADCAL;
+	while(ADC2->CR & ADC_CR_ADCAL);
+	for(volatile int i=0; i<10; i++);
+
+	ADC2->CFGR |= ADC_CFGR_DMAEN | ADC_CFGR_DMACFG | ADC_CFGR_EXTSEL_EXT14 | ADC_CFGR_EXTEN_0;
+	ADC2->SQR1 |= ADC_SQR1_L_1 | ADC_SQR1_SQ1_2CH | ADC_SQR1_SQ2_3CH | ADC_SQR1_SQ3_12CH;
+	ADC2->SMPR1 |= ADC_SMPR1_SMP2_1 | ADC_SMPR1_SMP3_1;
+	ADC2->SMPR2 |= ADC_SMPR2_SMP12_1;
+
+	ADC2->CR |= ADC_CR_ADEN;
+	while(!(ADC2->ISR & ADC_ISR_ADRDY));
+
+	DMA2_Channel1->CCR |= DMA_CCR_EN;
+
+	ADC2->CR |= ADC_CR_ADSTART;
+
+	return STATUS_OK;
+}
+
+Status_t ADC3Init(uint32_t buffer)
+{
+	RCC->AHBENR |= RCC_AHBENR_ADC34EN | RCC_AHBENR_DMA2EN;
+	ADC34_COMMON->CCR |= ADC34_CCR_CKMODE_0;
+
+	DMA2_Channel5->CCR = 0;
+	DMA2_Channel5->CPAR = (uint32_t)&ADC3->DR;
+	DMA2_Channel5->CMAR = buffer;
+	DMA2_Channel5->CNDTR = 2;
+
+	DMA2_Channel5->CCR |= DMA_CCR_MINC | DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_CIRC;
+
+	ADC3->CR = 0;
+	ADC3->CR |= ADC_CR_ADVREGEN_0;
+	for(volatile int i=0; i<1000; i++);
+
+	ADC3->CR |= ADC_CR_ADCAL;
+	while(ADC3->CR & ADC_CR_ADCAL);
+	for(volatile int i=0; i<10; i++);
+
+	ADC3->CR |= ADC_CR_ADEN;
+	while(!(ADC3->ISR & ADC_ISR_ADRDY));
+
+	ADC3->CFGR |= ADC_CFGR_DMAEN | ADC_CFGR_DMACFG | ADC_CFGR_EXTSEL_EXT14 | ADC_CFGR_EXTEN_0;
+	ADC3->SQR1 |= ADC_SQR1_L_0 | ADC_SQR1_SQ1_1CH | ADC_SQR1_SQ2_12CH;
+	ADC3->SMPR1 |= ADC_SMPR1_SMP1_1;
+	ADC3->SMPR2 |= ADC_SMPR2_SMP12_1;
+
+	DMA2_Channel5->CCR |= DMA_CCR_EN;
+
+	ADC3->CR |= ADC_CR_ADSTART;
+
+	return STATUS_OK;
+}

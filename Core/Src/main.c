@@ -18,8 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "adc.h"
-#include "dma.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -29,6 +27,7 @@
 #include "serial.h"
 #include "timer.h"
 #include "motor.h"
+#include "adc_r.h"
 
 /* USER CODE END Includes */
 
@@ -44,11 +43,6 @@ typedef enum{
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
-#define RIGHT_MOTOR_TIMER 				1
-#define LEFT_MOTOR_TIMER 				2
-#define RIGHT_MOTOR_ENCODER_TIMER		3
-#define LEFT_MOTOR_ENCODER_TIMER		4
 
 #define RIGHT_MOTOR_KP					0.3
 #define RIGHT_MOTOR_KI					0.05
@@ -69,11 +63,13 @@ typedef enum{
 
 /* USER CODE BEGIN PV */
 
+volatile uint32_t tick;
+
 serwo_str right_motor;
 serwo_str left_motor;
 
-uint32_t ADC2_measurement[3];
-uint32_t ADC3_measurement[2];
+uint16_t ADC2_measurement[3];
+uint16_t ADC3_measurement[2];
 float v_cell_1, v_cell_2, v_cell_3;
 uint8_t UART_buffer[5];
 int16_t speed_right, speed_left;
@@ -123,9 +119,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_ADC2_Init();
-  MX_ADC3_Init();
   /* USER CODE BEGIN 2 */
 
   GpioInit();
@@ -144,8 +137,8 @@ int main(void)
   filter_init(&(right_motor.filter));
   filter_init(&(left_motor.filter));
 
-  HAL_ADC_Start_DMA(&hadc2, ADC2_measurement, 3);
-  HAL_ADC_Start_DMA(&hadc3, ADC3_measurement, 2);
+  ADC2Init((uint32_t)&ADC2_measurement);
+  ADC3Init((uint32_t)&ADC3_measurement);
 
   Tim1Start();
   Tim2Start();
@@ -162,7 +155,11 @@ int main(void)
   {
 	  Usart3TransmitDMA((uint32_t)&msg);
 
-	  HAL_Delay(1000);
+	  HAL_Delay(500);
+
+	  v_cell_1 = 3.3f * ADC3_measurement[1] / 4096.0f / 0.72f;
+	  v_cell_2 = 3.3f * ADC3_measurement[0] / 4096.0f / 0.35f;
+	  v_cell_3 = 3.3f * ADC2_measurement[2] / 4096.0f / 0.25f;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -236,6 +233,7 @@ void TIM7_IRQHandler(void)
 
 }
 
+/*
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
 	if (hadc -> Instance == ADC2)
@@ -248,7 +246,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 		v_cell_3 = 3.3f * ADC3_measurement[1] / 4096.0f;
 	}
 }
-
+*/
 void parse(void)
 {
 	switch(UART_buffer[0])

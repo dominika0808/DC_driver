@@ -1,6 +1,8 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include "stdint.h"
+
 typedef enum{
 	STATUS_OK = 0x00U,
 	STATUS_TIMEOUT = 0x01U,
